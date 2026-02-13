@@ -1,0 +1,271 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  HOST
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  phoneNumber   String?   @unique
+  emailVerified DateTime?
+  image         String?
+  hashedPassword String?
+  role          UserRole  @default(USER)
+  status        String    @default("ACTIVE")
+  deactivatedAt DateTime?
+  deletedAt     DateTime?
+  deletedById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  favoriteIds   String[]
+
+  accounts      Account[]
+  sessions      Session[]
+  listings      Listing[]
+  reservations  Reservation[]
+  reviews       Review[]
+  adminAuditLogs AdminAuditLog[] @relation("AdminAuditLogs")
+}
+
+model AdminAuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String
+  targetId  String?
+  targetType String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  admin     User     @relation("AdminAuditLogs", fields: [adminId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Listing {
+  id                    String   @id @default(cuid())
+  title                 String
+  description           String
+  imageSrc              String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  category              String
+  roomCount             Int
+  bathroomCount         Int
+  guestCount            Int
+  locationValue         String
+  userId                String
+  price                 Int
+  amenities             Json[]   @default([])
+  rules                 String[]
+  sleepingArrangements  String[]
+  mapIframe             String?  @db.Text
+  
+  // New dynamic fields for highlights
+  highlights            Json[]  @default([])
+  
+  // Features and details
+  features              Json[]    @default([])
+  
+  // House rules
+  houseRules            String[]  @default([])
+  
+  // Cancellation policy
+  cancellationPolicy    String?   @db.Text
+  
+  // Check-in/Check-out info
+  checkInTime           String?   @default("3:00 PM")
+  checkOutTime          String?   @default("11:00 AM")
+  
+  // About the host
+  hostDescription       String?   @db.Text
+  
+  // Pricing details
+  basePricePerNight     Int?
+  cleaningFee           Int?
+  serviceFee            Int?
+  taxPercentage         Float?    @default(10)
+  
+  // Availability and minimum stay
+  minStayNights         Int?      @default(1)
+  maxGuestsAllowed      Int?
+  
+  // Instant book
+  instantBook           Boolean   @default(false)
+  
+  // Visibility
+  isActive              Boolean   @default(true)
+  
+  // Subtitle
+  subtitle              String?
+
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reservations          Reservation[]
+  reviews               Review[]
+  images                ListingImage[]
+  specifications        ListingSpecification[]
+  advantages            ListingAdvantage[]
+  bedrooms              ListingBedroom[]
+  gallerySections       ListingGallerySection[]
+}
+
+model ListingImage {
+  id        String   @id @default(cuid())
+  listingId String
+  imageUrl  String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model ListingSpecification {
+  id          String   @id @default(cuid())
+  listingId   String
+  title       String
+  description String
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model ListingAdvantage {
+  id          String   @id @default(cuid())
+  listingId   String
+  title       String
+  description String
+  iconUrl     String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model ListingBedroom {
+  id          String   @id @default(cuid())
+  listingId   String
+  name        String
+  type        String
+  description String
+  imageUrl    String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model ListingGallerySection {
+  id        String   @id @default(cuid())
+  listingId String
+  title     String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  images    ListingGalleryImage[]
+}
+
+model ListingGalleryImage {
+  id         String   @id @default(cuid())
+  sectionId  String
+  imageUrl   String
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  section    ListingGallerySection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+}
+
+model Reservation {
+  id         String   @id @default(cuid())
+  userId     String
+  listingId  String
+  startDate  DateTime
+  endDate    DateTime
+  nights     Int      @default(1)
+  adults     Int      @default(1)
+  children   Int      @default(0)
+  infants    Int      @default(0)
+  pets       Int      @default(0)
+  pricePerNight Int
+  subtotal   Int
+  cleaningFee Int    @default(0)
+  serviceFee Int     @default(0)
+  taxPercentage Float @default(0)
+  taxAmount  Int     @default(0)
+  totalPrice Int
+  stripeSessionId String? @unique
+  stripePaymentIntentId String?
+  stripeChargeId String?
+  stripeBalanceTransactionId String?
+  paymentStatus String? @default("unpaid")
+  paymentCurrency String? @default("usd")
+  amountPaid Int? @default(0)
+  cardBrand String?
+  cardLast4 String?
+  cardExpMonth Int?
+  cardExpYear Int?
+  refundStatus String? @default("none")
+  refundedAmount Int? @default(0)
+  stripeRefundIds String[] @default([])
+  refundHistory Json[] @default([])
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  rating    Int
+  comment   String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}

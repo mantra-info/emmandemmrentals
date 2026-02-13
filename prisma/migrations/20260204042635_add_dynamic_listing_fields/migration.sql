@@ -1,0 +1,16 @@
+-- AlterTable
+ALTER TABLE "Listing" ADD COLUMN     "basePricePerNight" INTEGER,
+ADD COLUMN     "cancellationPolicy" TEXT,
+ADD COLUMN     "checkInTime" TEXT DEFAULT '3:00 PM',
+ADD COLUMN     "checkOutTime" TEXT DEFAULT '11:00 AM',
+ADD COLUMN     "cleaningFee" INTEGER,
+ADD COLUMN     "features" JSONB[] DEFAULT ARRAY[]::JSONB[],
+ADD COLUMN     "highlights" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN     "hostDescription" TEXT,
+ADD COLUMN     "houseRules" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN     "instantBook" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "isActive" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "maxGuestsAllowed" INTEGER,
+ADD COLUMN     "minStayNights" INTEGER DEFAULT 1,
+ADD COLUMN     "serviceFee" INTEGER,
+ADD COLUMN     "taxPercentage" DOUBLE PRECISION DEFAULT 10;
