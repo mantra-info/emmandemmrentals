@@ -4,6 +4,35 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import ListingDetailClient from '@/components/pages/ListingDetailClient';
 
+type Highlight = string | { title: string; description?: string };
+
+const normalizeHighlights = (input: unknown): Highlight[] => {
+  if (!Array.isArray(input)) return [];
+
+  const highlights: Highlight[] = [];
+  for (const item of input) {
+    if (typeof item === 'string') {
+      const trimmed = item.trim();
+      if (trimmed) highlights.push(trimmed);
+      continue;
+    }
+
+    if (item && typeof item === 'object') {
+      const title = (item as { title?: unknown }).title;
+      if (typeof title === 'string' && title.trim()) {
+        const description = (item as { description?: unknown }).description;
+        highlights.push(
+          typeof description === 'string' && description.trim()
+            ? { title: title.trim(), description: description.trim() }
+            : { title: title.trim() }
+        );
+      }
+    }
+  }
+
+  return highlights;
+};
+
 export const dynamic = 'force-dynamic';
 
 export default async function PropertyPage({
@@ -51,7 +80,7 @@ export default async function PropertyPage({
     mapIframe: listing.mapIframe ?? null,
     amenities: listing.amenities ?? [],
     rules: listing.rules ?? [],
-    highlights: listing.highlights ?? [],
+    highlights: normalizeHighlights(listing.highlights),
     reviews: listing.reviews.map((review) => ({
       ...review,
       user: {
