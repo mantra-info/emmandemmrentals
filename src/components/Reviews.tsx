@@ -43,7 +43,7 @@ interface ReviewData {
   id: string;
   user: {
     name: string;
-    image?: string;
+    image?: string | null;
   };
   comment: string;
   rating: number;

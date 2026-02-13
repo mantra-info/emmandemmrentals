@@ -5,7 +5,7 @@ interface Bedroom {
   name: string;
   type: string;
   description: string;
-  imageUrl: string;
+  imageUrl: string | null;
   order: number;
   listingId: string;
   createdAt: string;
