@@ -295,9 +295,9 @@ const GuestRow = ({ label, sub, value, onDec, onInc, isPet }: any) => (
       <span className={`text-[13px] mt-1.5 font-medium ${isPet ? 'text-[#E94E89] underline cursor-pointer' : 'text-gray-400'}`}>{sub}</span>
     </div>
     <div className="flex items-center gap-6">
-      <button onClick={onDec} className="w-10 h-10 rounded-full border-2 border-gray-100 flex items-center justify-center text-gray-300 hover:border-gray-900 hover:text-gray-900 transition-all"><Minus size={18} strokeWidth={3} /></button>
-      <span className="w-4 text-center font-bold text-lg">{value}</span>
-      <button onClick={onInc} className="w-10 h-10 rounded-full border-2 border-gray-100 flex items-center justify-center text-gray-300 hover:border-gray-900 hover:text-gray-900 transition-all"><Plus size={18} strokeWidth={3} /></button>
+      <button onClick={onDec} className="w-10 h-10 text-gray-900 rounded-full border-2 border-gray-100 flex items-center justify-center  hover:border-gray-900 hover:text-gray-900 transition-all"><Minus size={18} strokeWidth={3} /></button>
+      <span className="w-4 text-center text-gray-900 font-bold text-lg">{value}</span>
+      <button onClick={onInc} className="w-10 h-10 text-gray-900 rounded-full border-2 border-gray-100 flex items-center justify-center  hover:border-gray-900 hover:text-gray-900 transition-all"><Plus size={18} strokeWidth={3} /></button>
     </div>
   </div>
 );

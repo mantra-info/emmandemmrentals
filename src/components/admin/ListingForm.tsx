@@ -501,9 +501,9 @@ export default function ListingForm({ initialData, onSubmit, isLoading = false }
                                 </button>
                                 <div className="space-y-3">
                                     {highlights.map((h, idx) => (
-                                        <div key={idx} className="flex gap-4 items-center bg-white p-5 rounded-[1.5rem] border border-zinc-100 shadow-sm transition-all hover:border-zinc-300 group">
+                                        <div key={idx} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 sm:gap-4 items-center bg-white p-5 rounded-[1.5rem] border border-zinc-100 shadow-sm transition-all hover:border-zinc-300 group">
                                             <input
-                                                className="flex-1 bg-transparent font-black text-zinc-900 outline-none text-sm placeholder:text-zinc-300"
+                                                className="w-full bg-transparent font-black text-zinc-900 outline-none text-sm placeholder:text-zinc-300"
                                                 placeholder="Title (e.g. Free WiFi)"
                                                 value={h.title}
                                                 onChange={(e) => {
@@ -513,7 +513,7 @@ export default function ListingForm({ initialData, onSubmit, isLoading = false }
                                                 }}
                                             />
                                             <input
-                                                className="flex-1 bg-transparent font-bold text-zinc-500 outline-none text-sm placeholder:text-zinc-200"
+                                                className="w-full bg-transparent font-bold text-zinc-500 outline-none text-sm placeholder:text-zinc-200"
                                                 placeholder="Description (e.g. 200 Mbps fiber)"
                                                 value={h.description}
                                                 onChange={(e) => {
@@ -522,7 +522,7 @@ export default function ListingForm({ initialData, onSubmit, isLoading = false }
                                                     setHighlights(u);
                                                 }}
                                             />
-                                            <button onClick={() => setHighlights(highlights.filter((_, i) => i !== idx))}>
+                                            <button onClick={() => setHighlights(highlights.filter((_, i) => i !== idx))} className="justify-self-end">
                                                 <Trash2 size={16} className="text-zinc-300 hover:text-red-500 transition-colors" />
                                             </button>
                                         </div>
@@ -711,17 +711,8 @@ export default function ListingForm({ initialData, onSubmit, isLoading = false }
                             <button type="button" onClick={() => setAdvantages([...advantages, { title: '', description: '', iconUrl: '', order: advantages.length }])} className="w-full py-5 bg-zinc-50 border-2 border-dashed border-zinc-200 rounded-[2.5rem] font-black text-[10px] uppercase tracking-widest text-zinc-400 hover:text-rose-500 hover:border-rose-200 transition-all mb-8 shadow-sm">+ Add Neighborhood Advantage</button>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                                 {advantages.map((adv, idx) => (
-                                    <div key={idx} className="p-6 bg-zinc-50 rounded-[2.5rem] border border-zinc-100 flex gap-6 items-start relative group shadow-sm">
+                                    <div key={idx} className="p-6 bg-zinc-50 rounded-[2.5rem] border border-zinc-100 flex gap-4 items-start relative group shadow-sm">
                                         <button onClick={() => setAdvantages(advantages.filter((_, i) => i !== idx))} className="absolute top-4 right-4 text-zinc-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><X size={16}/></button>
-                                        <div className="w-20 h-20 bg-white rounded-3xl border-2 border-dashed border-zinc-200 flex items-center justify-center shrink-0 overflow-hidden relative shadow-inner">
-                                            {adv.iconUrl ? <img src={adv.iconUrl} className="w-full h-full object-cover" /> : (
-                                                <label className="cursor-pointer flex flex-col items-center">
-                                                    <Upload size={14} className="text-zinc-200" />
-                                                    <span className="text-[8px] font-black text-zinc-300 mt-1 uppercase">ICON</span>
-                                                    <input type="file" className="hidden" onChange={(e) => handleUpload(e, 'icon', idx)} />
-                                                </label>
-                                            )}
-                                        </div>
                                         <div className="flex-1 space-y-2">
                                             <input className="w-full bg-transparent font-black text-zinc-900 text-sm outline-none border-b border-zinc-200 pb-1" placeholder="e.g. Near Transit" value={adv.title} onChange={(e) => { const u = [...advantages]; u[idx].title = e.target.value; setAdvantages(u); }} />
                                             <textarea className="w-full bg-transparent text-[10px] font-bold text-zinc-500 outline-none leading-relaxed h-16" placeholder="Describe this advantage..." value={adv.description} onChange={(e) => { const u = [...advantages]; u[idx].description = e.target.value; setAdvantages(u); }} />

@@ -19,6 +19,7 @@ type ListingDetail = {
   subtitle: string;
   description: string;
   imageSrc: string;
+  locationValue: string;
   guestCount: number;
   roomCount: number;
   bathroomCount: number;
@@ -42,6 +43,14 @@ type ListingDetail = {
     order: number;
     listingId: string;
     createdAt: string;
+  }>;
+  advantages: Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    iconUrl: string | null;
+    order: number;
+    listingId: string;
   }>;
   basePricePerNight?: number | null;
   minStayNights?: number | null;
@@ -161,7 +170,11 @@ export default function ListingDetailClient({
           userId={userId}
         />
 
-        <LocationMap mapIframe={listing.mapIframe || undefined} />
+        <LocationMap
+          mapIframe={listing.mapIframe || undefined}
+          listingId={listing.id}
+          locationLabel={listing.locationValue}
+        />
         <ImportantThingsToKnow rules={listing.rules} />
         <BookingBar listingId={listing.id} basePricePerNight={listing.basePricePerNight} minStayNights={listing.minStayNights} />
       </div>

@@ -50,6 +50,9 @@ export default async function PropertyPage({
         images: {
           orderBy: { order: 'asc' },
         },
+        advantages: {
+          orderBy: { order: 'asc' },
+        },
         bedrooms: {
           orderBy: { order: 'asc' },
         },
@@ -93,6 +96,10 @@ export default async function PropertyPage({
       ...bedroom,
       imageUrl: bedroom.imageUrl ?? null,
       createdAt: bedroom.createdAt.toISOString(),
+    })),
+    advantages: listing.advantages.map((adv) => ({
+      ...adv,
+      iconUrl: adv.iconUrl ?? null,
     })),
   };
 
