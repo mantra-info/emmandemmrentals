@@ -12,6 +12,15 @@ const AmenitiesModal = ({ isOpen, onClose, amenities = [] }: AmenitiesModalProps
     if (!isOpen) return null;
 
     const { included, notIncluded } = resolveAmenitySelections(amenities);
+    const knownCategoryEntries = Object.entries(AMENITY_CATEGORIES);
+    const knownCategoryKeys = new Set(knownCategoryEntries.map(([key]) => key));
+    const otherCategoryKeys = Array.from(
+        new Set(
+            included
+                .map((a: any) => a?.category)
+                .filter((category: any) => typeof category === 'string' && !knownCategoryKeys.has(category))
+        )
+    );
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -36,7 +45,7 @@ const AmenitiesModal = ({ isOpen, onClose, amenities = [] }: AmenitiesModalProps
 
                 {/* Scrollable Content */}
                 <div className="flex-1 overflow-y-auto p-8 space-y-12">
-                    {Object.entries(AMENITY_CATEGORIES).map(([categoryKey, categoryName]) => {
+                    {[...knownCategoryEntries, ...otherCategoryKeys.map((key) => [key, 'Other amenities'] as [string, string])].map(([categoryKey, categoryName]) => {
                         const categoryAmenities = included.filter((a: any) => a.category === categoryKey);
                         if (categoryAmenities.length === 0) return null;
 
@@ -52,7 +61,7 @@ const AmenitiesModal = ({ isOpen, onClose, amenities = [] }: AmenitiesModalProps
                                                     <IconComponent size={24} className="text-gray-600" />
                                                 </div>
                                                 <div>
-                                                    <p className="text-gray-700 font-medium">{amenity.name}</p>
+                                                    <p className="text-gray-700 font-medium">{amenity.name || 'Custom amenity'}</p>
                                                     {amenity.description && (
                                                         <p className="text-xs text-gray-500 mt-1">{amenity.description}</p>
                                                     )}
@@ -77,7 +86,7 @@ const AmenitiesModal = ({ isOpen, onClose, amenities = [] }: AmenitiesModalProps
                                                 <IconComponent size={24} className="text-gray-400" />
                                             </div>
                                             <div>
-                                                <p className="text-gray-500 font-medium line-through">{amenity.name}</p>
+                                                <p className="text-gray-500 font-medium line-through">{amenity.name || 'Custom amenity'}</p>
                                                 {amenity.description && (
                                                     <p className="text-xs text-gray-400 mt-1">{amenity.description}</p>
                                                 )}

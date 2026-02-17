@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Home, User, MapPin, Tag, MoreVertical, Edit, Trash2, Plus } from 'lucide-react';
+import { Home, User, MapPin, Tag, MoreVertical, Edit, Trash2, Plus, GripVertical, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function ListingsPage() {
@@ -11,18 +11,16 @@ export default function ListingsPage() {
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-    const [page, setPage] = useState(1);
-    const [pageSize] = useState(9);
-    const [totalPages, setTotalPages] = useState(1);
     const [total, setTotal] = useState(0);
+    const [isSavingOrder, setIsSavingOrder] = useState(false);
+    const [draggingId, setDraggingId] = useState<string | null>(null);
 
     const fetchListings = async () => {
         try {
             setIsLoading(true);
-            const response = await fetch(`/api/admin/listings?page=${page}&pageSize=${pageSize}`);
+            const response = await fetch(`/api/admin/listings?all=1`);
             const data = await response.json();
             setListings(data.data || []);
-            setTotalPages(data.totalPages || 1);
             setTotal(data.total || 0);
         } catch (error) {
             console.error('Failed to fetch listings:', error);
@@ -33,7 +31,7 @@ export default function ListingsPage() {
 
     useEffect(() => {
         fetchListings();
-    }, [page]);
+    }, []);
 
     // Refetch listings when returning from edit/create
     useEffect(() => {
@@ -77,6 +75,39 @@ export default function ListingsPage() {
         }
     };
 
+    const persistOrder = async (orderedIds: string[]) => {
+        setIsSavingOrder(true);
+        try {
+            const response = await fetch('/api/admin/listings/reorder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderedIds }),
+            });
+            if (!response.ok) {
+                throw new Error('Failed to save listing order');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Failed to save listing order. Refreshing data.');
+            await fetchListings();
+        } finally {
+            setIsSavingOrder(false);
+        }
+    };
+
+    const moveListing = async (fromId: string, toId: string) => {
+        if (!fromId || !toId || fromId === toId) return;
+        const fromIndex = listings.findIndex((item) => item.id === fromId);
+        const toIndex = listings.findIndex((item) => item.id === toId);
+        if (fromIndex < 0 || toIndex < 0) return;
+
+        const reordered = [...listings];
+        const [dragged] = reordered.splice(fromIndex, 1);
+        reordered.splice(toIndex, 0, dragged);
+        setListings(reordered);
+        await persistOrder(reordered.map((item) => item.id));
+    };
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -90,9 +121,15 @@ export default function ListingsPage() {
             <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Listing Management</h1>
-                    <p className="text-gray-500">Monitor and manage property listings.</p>
+                    <p className="text-gray-500">Monitor and manage property listings. Drag and drop to control display order.</p>
                 </div>
                 <div className="flex items-center gap-3">
+                    {isSavingOrder && (
+                        <div className="flex items-center gap-2 text-xs font-semibold text-blue-600">
+                            <Loader2 size={14} className="animate-spin" />
+                            Saving order...
+                        </div>
+                    )}
                     <div className="flex items-center bg-white border border-gray-200 rounded-lg overflow-hidden">
                         <button
                             onClick={() => setViewMode('grid')}
@@ -120,13 +157,30 @@ export default function ListingsPage() {
             {viewMode === 'grid' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                     {listings.map((listing) => (
-                        <div key={listing.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden group hover:shadow-md transition-shadow relative">
+                        <div
+                            key={listing.id}
+                            draggable
+                            onDragStart={() => setDraggingId(listing.id)}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={async () => {
+                                if (!draggingId || draggingId === listing.id) return;
+                                await moveListing(draggingId, listing.id);
+                                setDraggingId(null);
+                            }}
+                            onDragEnd={() => setDraggingId(null)}
+                            className={`bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden group hover:shadow-md transition-shadow relative ${
+                                draggingId === listing.id ? 'opacity-60' : ''
+                            }`}
+                        >
                             <div className="relative h-48 overflow-hidden">
                                 <img
                                     src={listing.imageSrc}
                                     alt={listing.title}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 />
+                                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm p-2 rounded-lg border border-white/20 text-gray-700 cursor-grab active:cursor-grabbing">
+                                    <GripVertical size={16} />
+                                </div>
                                 <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-gray-900 shadow-sm border border-white/20">
                                     ${listing.basePricePerNight} / night
                                 </div>
@@ -205,8 +259,23 @@ export default function ListingsPage() {
                     </div>
                     <div className="divide-y divide-gray-100">
                         {listings.map((listing) => (
-                            <div key={listing.id} className="grid grid-cols-12 gap-4 px-6 py-5 items-start">
+                            <div
+                                key={listing.id}
+                                draggable
+                                onDragStart={() => setDraggingId(listing.id)}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={async () => {
+                                    if (!draggingId || draggingId === listing.id) return;
+                                    await moveListing(draggingId, listing.id);
+                                    setDraggingId(null);
+                                }}
+                                onDragEnd={() => setDraggingId(null)}
+                                className={`grid grid-cols-12 gap-4 px-6 py-5 items-start ${draggingId === listing.id ? 'opacity-60 bg-blue-50/50' : ''}`}
+                            >
                                 <div className="col-span-4 flex gap-4">
+                                    <div className="pt-1 text-gray-400 cursor-grab active:cursor-grabbing">
+                                        <GripVertical size={16} />
+                                    </div>
                                     <img src={listing.imageSrc} alt={listing.title} className="w-24 h-20 rounded-xl object-cover border border-gray-100" />
                                     <div>
                                         <p className="font-semibold text-gray-900">{listing.title}</p>
@@ -288,25 +357,7 @@ export default function ListingsPage() {
 
             {total > 0 && (
                 <div className="mt-8 flex items-center justify-between">
-                    <p className="text-sm text-gray-500">
-                        Showing page {page} of {totalPages} · {total} total listings
-                    </p>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setPage((p) => Math.max(1, p - 1))}
-                            disabled={page === 1}
-                            className="px-3 py-2 text-xs font-semibold border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-                        >
-                            Previous
-                        </button>
-                        <button
-                            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                            disabled={page >= totalPages}
-                            className="px-3 py-2 text-xs font-semibold border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-                        >
-                            Next
-                        </button>
-                    </div>
+                    <p className="text-sm text-gray-500">{total} total listings</p>
                 </div>
             )}
         </div>

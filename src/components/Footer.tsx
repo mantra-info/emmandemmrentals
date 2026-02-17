@@ -1,6 +1,7 @@
 import React from 'react';
 import { Facebook, Instagram, MessageCircle, Youtube } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 const Footer = () => {
   return (
@@ -21,12 +22,12 @@ const Footer = () => {
           </div>
 
           <div className="flex flex-row md:flex-col gap-6 md:gap-2">
-            <a href="#" className="text-gray-800 hover:text-black transition text-sm md:text-[15px]">
+            <Link href="/privacy-policy" className="text-gray-800 hover:text-black transition text-sm md:text-[15px]">
               Privacy Policy
-            </a>
-            <a href="#" className="text-gray-800 hover:text-black transition text-sm md:text-[15px]">
+            </Link>
+            <Link href="/terms-of-service" className="text-gray-800 hover:text-black transition text-sm md:text-[15px]">
               Terms of Service
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -34,16 +35,16 @@ const Footer = () => {
         <div className="flex flex-col items-center md:items-end gap-6 w-full md:w-auto">
           {/* Social Icons - Using a custom pink color to match your branding */}
           <div className="flex gap-5">
-            <a href="#" className="text-[#a62d55] hover:opacity-80 transition">
+            <a href="https://www.facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="text-[#a62d55] hover:opacity-80 transition">
               <Facebook size={22} strokeWidth={1.5} />
             </a>
-            <a href="#" className="text-[#a62d55] hover:opacity-80 transition">
+            <a href="https://www.instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-[#a62d55] hover:opacity-80 transition">
               <Instagram size={22} strokeWidth={1.5} />
             </a>
-            <a href="#" className="text-[#a62d55] hover:opacity-80 transition">
+            <a href="https://wa.me/" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="text-[#a62d55] hover:opacity-80 transition">
               <MessageCircle size={22} strokeWidth={1.5} /> {/* Representing WhatsApp */}
             </a>
-            <a href="#" className="text-[#a62d55] hover:opacity-80 transition">
+            <a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="text-[#a62d55] hover:opacity-80 transition">
               <Youtube size={24} strokeWidth={1.5} />
             </a>
           </div>

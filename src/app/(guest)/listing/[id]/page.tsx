@@ -35,6 +35,18 @@ const normalizeHighlights = (input: unknown): Highlight[] => {
 
 export const dynamic = 'force-dynamic';
 
+async function withPrismaPoolRetry<T>(run: () => Promise<T>, retries = 1, delayMs = 250): Promise<T> {
+  try {
+    return await run();
+  } catch (error: any) {
+    if (retries > 0 && error?.code === 'P2024') {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      return withPrismaPoolRetry(run, retries - 1, delayMs);
+    }
+    throw error;
+  }
+}
+
 export default async function PropertyPage({
   params,
 }: {
@@ -42,8 +54,7 @@ export default async function PropertyPage({
 }) {
   const { id } = await params;
 
-  const [session, listing] = await Promise.all([
-    getServerSession(authOptions),
+  const listing = await withPrismaPoolRetry(() =>
     prisma.listing.findUnique({
       where: { id },
       include: {
@@ -70,12 +81,15 @@ export default async function PropertyPage({
           },
         },
       },
-    }),
-  ]);
+    })
+  );
 
   if (!listing) {
     notFound();
   }
+
+  // Session is non-critical for rendering listing details.
+  const session = await getServerSession(authOptions);
 
   const serialized = {
     ...listing,

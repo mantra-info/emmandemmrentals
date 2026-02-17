@@ -40,16 +40,16 @@ const Navbar = () => {
         <div className="flex items-center gap-4 md:gap-12">
           {/* Replace with your actual logo image */}
           <Link href={'/'} className="flex items-center gap-2 cursor-pointer">
-            <Image src={'/logobrand.png'} width={60} height={40} className='object-contain md:w-[100px] md:h-[50px]' alt='logo' />
+            <Image src={'/logo.png'} width={60} height={40} className='object-contain md:w-[100px] md:h-[50px]' alt='logo' />
           </Link>
 
           
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
-          <button className="hidden sm:block px-4 md:px-6 py-2 border border-black text-black rounded-lg text-xs md:text-sm font-semibold hover:bg-gray-50 transition">
+          {/* <button className="hidden sm:block px-4 md:px-6 py-2 border border-black text-black rounded-lg text-xs md:text-sm font-semibold hover:bg-gray-50 transition">
             Contact Us
-          </button>
+          </button> */}
 
           <div className="relative" ref={menuRef}>
             <div

@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
             cleaningFee = null,
             serviceFee = null,
             taxPercentage = 10,
+            taxProfileId = null,
             minStayNights = 1,
             maxGuestsAllowed = null,
             instantBook = false,
@@ -60,6 +61,20 @@ export async function POST(request: NextRequest) {
         const parsedTaxPercentage = taxPercentage ? parseInt(String(taxPercentage), 10) : 10;
         const parsedMinStayNights = minStayNights ? parseInt(String(minStayNights), 10) : 1;
         const parsedMaxGuestsAllowed = maxGuestsAllowed ? parseInt(String(maxGuestsAllowed), 10) : null;
+        const parsedTaxProfileId = typeof taxProfileId === "string" && taxProfileId.trim() ? taxProfileId.trim() : null;
+
+        if (parsedTaxProfileId) {
+            const profileExists = await prisma.taxProfile.findUnique({
+                where: { id: parsedTaxProfileId },
+                select: { id: true },
+            });
+            if (!profileExists) {
+                return NextResponse.json(
+                    { error: "Invalid tax profile selected" },
+                    { status: 400 }
+                );
+            }
+        }
 
         if (!title || !description || !locationValue || !category) {
             return NextResponse.json(
@@ -108,6 +123,7 @@ export async function POST(request: NextRequest) {
                     ...(parsedCleaningFee && { cleaningFee: parsedCleaningFee }),
                     ...(parsedServiceFee && { serviceFee: parsedServiceFee }),
                     taxPercentage: parsedTaxPercentage,
+                    taxProfileId: parsedTaxProfileId,
                     minStayNights: parsedMinStayNights,
                     ...(parsedMaxGuestsAllowed && { maxGuestsAllowed: parsedMaxGuestsAllowed }),
                     instantBook,
@@ -130,6 +146,13 @@ export async function POST(request: NextRequest) {
                         select: {
                             name: true,
                             email: true,
+                        },
+                    },
+                    taxProfile: {
+                        include: {
+                            lines: {
+                                orderBy: { order: "asc" },
+                            },
                         },
                     },
                 },
@@ -273,6 +296,13 @@ export async function POST(request: NextRequest) {
                                 email: true,
                             },
                         },
+                        taxProfile: {
+                            include: {
+                                lines: {
+                                    orderBy: { order: "asc" },
+                                },
+                            },
+                        },
                     },
                 })
             );
@@ -287,6 +317,11 @@ export async function POST(request: NextRequest) {
                 );
             }
 
+            const orderAggregate = await prisma.listing.aggregate({
+                _max: { displayOrder: true },
+            });
+            const nextDisplayOrder = (orderAggregate._max.displayOrder ?? -1) + 1;
+
             const listing = await prisma.listing.create({
                 data: {
                     title,
@@ -298,6 +333,7 @@ export async function POST(request: NextRequest) {
                     bathroomCount: parsedBathroomCount,
                     guestCount: parsedGuestCount,
                     locationValue,
+                    displayOrder: nextDisplayOrder,
                     userId: currentUserId,
                     imageSrc: imageSrc || images[0] || "/default-listing.jpg",
                     amenities,
@@ -313,6 +349,7 @@ export async function POST(request: NextRequest) {
                     ...(parsedCleaningFee && { cleaningFee: parsedCleaningFee }),
                     ...(parsedServiceFee && { serviceFee: parsedServiceFee }),
                     taxPercentage: parsedTaxPercentage,
+                    taxProfileId: parsedTaxProfileId,
                     minStayNights: parsedMinStayNights,
                     ...(parsedMaxGuestsAllowed && { maxGuestsAllowed: parsedMaxGuestsAllowed }),
                     instantBook,
@@ -379,6 +416,13 @@ export async function POST(request: NextRequest) {
                             email: true,
                         },
                     },
+                    taxProfile: {
+                        include: {
+                            lines: {
+                                orderBy: { order: "asc" },
+                            },
+                        },
+                    },
                 },
             });
 
@@ -438,6 +482,13 @@ export async function GET(request: NextRequest) {
                     select: {
                         name: true,
                         email: true,
+                    },
+                },
+                taxProfile: {
+                    include: {
+                        lines: {
+                            orderBy: { order: "asc" },
+                        },
                     },
                 },
             },

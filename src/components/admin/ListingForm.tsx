@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, memo } from 'react';
+import { useState, useRef, memo, useEffect } from 'react';
 import { 
     Upload, X, ChevronUp, ChevronDown, AlertCircle, Save, 
     Image as ImageIcon, MapPin, DollarSign, Users, Bed, Bath, 
@@ -15,6 +15,20 @@ const CATEGORIES = ['Apartment', 'House', 'Room', 'Condo', 'Villa', 'Penthouse',
 const LOCATIONS = ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia', 'San Antonio', 'San Diego'];
 const PREDEFINED_RULES = ['No Smoking', 'No Pets', 'No Parties', 'Quiet Hours', 'No Short Term Rentals', 'Minimum Stay'];
 const AMENITY_ICON_OPTIONS = Array.from(new Set(AMENITIES_LIST.map(a => a.icon)));
+
+type TaxProfileOption = {
+    id: string;
+    name: string;
+    country?: string;
+    state?: string | null;
+    city?: string | null;
+};
+
+type GalleryDragItem = {
+    sourceSectionIndex: number;
+    sourceImageIndex: number;
+    imageUrl: string;
+};
 
 // --- HELPER COMPONENTS (DEFINED OUTSIDE TO PREVENT FOCUS LOSS) ---
 
@@ -99,6 +113,7 @@ export default function ListingForm({ initialData, onSubmit, isLoading = false }
         cleaningFee: initialData?.cleaningFee || '',
         serviceFee: initialData?.serviceFee || '',
         taxPercentage: initialData?.taxPercentage || '10',
+        taxProfileId: initialData?.taxProfileId || '',
         minStayNights: initialData?.minStayNights || '1',
         maxGuestsAllowed: initialData?.maxGuestsAllowed || '',
         instantBook: initialData?.instantBook || false,
@@ -157,16 +172,35 @@ export default function ListingForm({ initialData, onSubmit, isLoading = false }
     const [bedrooms, setBedrooms] = useState<any[]>(initialData?.bedrooms || []);
     const [uploadingCount, setUploadingCount] = useState(0);
     const [uploadMessage, setUploadMessage] = useState('');
+    const [taxProfiles, setTaxProfiles] = useState<TaxProfileOption[]>([]);
+    const [draggedGalleryImage, setDraggedGalleryImage] = useState<GalleryDragItem | null>(null);
+    const [dropTarget, setDropTarget] = useState<{ sectionIndex: number; imageIndex: number | null } | null>(null);
     const isUploading = uploadingCount > 0;
     
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const fetchTaxProfiles = async () => {
+            try {
+                const response = await fetch('/api/admin/tax-profiles');
+                if (!response.ok) return;
+                const data = await response.json();
+                if (Array.isArray(data)) {
+                    setTaxProfiles(data);
+                }
+            } catch (error) {
+                console.error('Failed to fetch tax profiles:', error);
+            }
+        };
+        fetchTaxProfiles();
+    }, []);
 
     // --- LOGIC HANDLERS (ALL ORIGINAL FUNCTIONS) ---
     const handleFieldChange = (field: string, value: any) => setFormData(p => ({ ...p, [field]: value }));
     const updateAmenitySelection = (id: string, updates: any) => {
         setSelectedAmenities(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
     };
-    const addCustomAmenity = () => {
+    const addCustomAmenity = (category: string = 'essentials') => {
         setSelectedAmenities(prev => [
             ...prev,
             {
@@ -175,7 +209,7 @@ export default function ListingForm({ initialData, onSubmit, isLoading = false }
                 name: '',
                 description: '',
                 icon: 'wifi',
-                category: 'essentials',
+                category,
                 custom: true,
             },
         ]);
@@ -231,6 +265,42 @@ export default function ListingForm({ initialData, onSubmit, isLoading = false }
         if (direction === 'up' && index > 0) [newImages[index], newImages[index - 1]] = [newImages[index - 1], newImages[index]];
         else if (direction === 'down' && index < newImages.length - 1) [newImages[index], newImages[index + 1]] = [newImages[index + 1], newImages[index]];
         setImages(newImages);
+    };
+
+    const handleGalleryImageDrop = (targetSectionIndex: number, targetImageIndex: number | null = null) => {
+        if (!draggedGalleryImage) return;
+
+        setGallerySections((prev) => {
+            const updated = [...prev];
+            const sourceSection = updated[draggedGalleryImage.sourceSectionIndex];
+            const targetSection = updated[targetSectionIndex];
+            if (!sourceSection || !targetSection) return prev;
+
+            const sourceImages = [...(sourceSection.images || [])];
+            const [movedImage] = sourceImages.splice(draggedGalleryImage.sourceImageIndex, 1);
+            if (!movedImage) return prev;
+            updated[draggedGalleryImage.sourceSectionIndex] = { ...sourceSection, images: sourceImages };
+
+            const destinationImages = [...(updated[targetSectionIndex].images || [])];
+            let insertionIndex = targetImageIndex === null ? destinationImages.length : targetImageIndex;
+
+            if (
+                draggedGalleryImage.sourceSectionIndex === targetSectionIndex &&
+                targetImageIndex !== null &&
+                draggedGalleryImage.sourceImageIndex < targetImageIndex
+            ) {
+                insertionIndex -= 1;
+            }
+
+            insertionIndex = Math.max(0, Math.min(insertionIndex, destinationImages.length));
+            destinationImages.splice(insertionIndex, 0, movedImage);
+            updated[targetSectionIndex] = { ...updated[targetSectionIndex], images: destinationImages };
+
+            return updated;
+        });
+
+        setDraggedGalleryImage(null);
+        setDropTarget(null);
     };
 
     const handleFinalSubmit = (e: React.FormEvent) => {
@@ -350,80 +420,88 @@ export default function ListingForm({ initialData, onSubmit, isLoading = false }
                         <FormSection title="Amenities" icon={Star}>
                             <button
                                 type="button"
-                                onClick={addCustomAmenity}
+                                onClick={() => addCustomAmenity('essentials')}
                                 className="w-full py-5 bg-zinc-50 border-2 border-dashed border-zinc-200 rounded-[2.5rem] font-black text-[10px] uppercase tracking-widest text-zinc-400 hover:text-rose-500 hover:border-rose-200 transition-all mb-8 shadow-sm"
                             >
                                 + Add Custom Amenity
                             </button>
 
-                            {selectedAmenities.some((a: any) => a.custom) && (
-                                <div className="mb-10 space-y-4">
-                                    <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
-                                        <div className="w-4 h-[2px] bg-zinc-300 rounded-full" /> Custom Amenities
-                                    </h3>
-                                    {selectedAmenities.filter((a: any) => a.custom).map((amenity: any) => (
-                                        <div key={amenity.id} className="p-5 border-2 border-zinc-100 rounded-[1.5rem] bg-white shadow-sm">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <input
-                                                    className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-4 py-3 font-black text-zinc-900 focus:bg-white focus:border-rose-500 outline-none transition-all"
-                                                    placeholder="Amenity name"
-                                                    value={amenity.name || ''}
-                                                    onChange={(e) => updateAmenitySelection(amenity.id, { name: e.target.value })}
-                                                />
-                                                <select
-                                                    className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-4 py-3 font-black text-zinc-900 focus:bg-white focus:border-rose-500 outline-none transition-all"
-                                                    value={amenity.category || 'essentials'}
-                                                    onChange={(e) => updateAmenitySelection(amenity.id, { category: e.target.value })}
-                                                >
-                                                    {Object.entries(AMENITY_CATEGORIES).map(([key, label]) => (
-                                                        <option key={key} value={key}>{label}</option>
-                                                    ))}
-                                                </select>
-                                                <select
-                                                    className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-4 py-3 font-black text-zinc-900 focus:bg-white focus:border-rose-500 outline-none transition-all"
-                                                    value={amenity.icon || 'wifi'}
-                                                    onChange={(e) => updateAmenitySelection(amenity.id, { icon: e.target.value })}
-                                                >
-                                                    {AMENITY_ICON_OPTIONS.map(icon => (
-                                                        <option key={icon} value={icon}>{icon}</option>
-                                                    ))}
-                                                </select>
-                                                <input
-                                                    className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-4 py-3 font-bold text-zinc-700 focus:bg-white focus:border-rose-500 outline-none transition-all"
-                                                    placeholder="Description (optional)"
-                                                    value={amenity.description || ''}
-                                                    onChange={(e) => updateAmenitySelection(amenity.id, { description: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="flex items-center gap-2 mt-4">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => updateAmenitySelection(amenity.id, { status: amenity.status === 'included' ? 'not_included' : 'included' })}
-                                                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${amenity.status === 'included' ? 'bg-rose-500 text-white' : 'bg-zinc-900 text-white'}`}
-                                                >
-                                                    {amenity.status === 'included' ? 'Included' : 'Not Included'}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setSelectedAmenities(selectedAmenities.filter(a => a.id !== amenity.id))}
-                                                    className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-red-500 transition-all"
-                                                >
-                                                    Remove
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
                             {Object.entries(AMENITY_CATEGORIES).map(([catKey, catName]) => {
                                 const categoryAmenities = AMENITIES_LIST.filter(a => a.category === catKey);
-                                if (categoryAmenities.length === 0) return null;
+                                const customCategoryAmenities = selectedAmenities.filter((a: any) => a.custom && (a.category || 'essentials') === catKey);
+                                if (categoryAmenities.length === 0 && customCategoryAmenities.length === 0) return null;
                                 return (
                                 <div key={catKey} className="mb-10 last:mb-0">
-                                    <h3 className="text-[11px] font-black text-rose-500 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
-                                        <div className="w-4 h-[2px] bg-rose-500 rounded-full" /> {catName}
-                                    </h3>
+                                    <div className="mb-6 flex items-center justify-between gap-4">
+                                        <h3 className="text-[11px] font-black text-rose-500 uppercase tracking-[0.3em] flex items-center gap-2">
+                                            <div className="w-4 h-[2px] bg-rose-500 rounded-full" /> {catName}
+                                        </h3>
+                                        <button
+                                            type="button"
+                                            onClick={() => addCustomAmenity(catKey)}
+                                            className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-zinc-200 text-zinc-500 hover:text-rose-500 hover:border-rose-200 transition-all"
+                                        >
+                                            + Add Custom In This Section
+                                        </button>
+                                    </div>
+
+                                    {customCategoryAmenities.length > 0 && (
+                                        <div className="mb-5 space-y-3">
+                                            {customCategoryAmenities.map((amenity: any) => (
+                                                <div
+                                                    key={amenity.id}
+                                                    className={`p-5 border-2 rounded-[1.5rem] transition-all ${
+                                                        amenity.status === 'included'
+                                                            ? 'border-rose-500 bg-rose-50'
+                                                            : amenity.status === 'not_included'
+                                                            ? 'border-zinc-300 bg-zinc-50'
+                                                            : 'border-zinc-50 bg-white'
+                                                    }`}
+                                                >
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                        <input
+                                                            className="w-full bg-white border-2 border-transparent rounded-2xl px-4 py-3 font-black text-zinc-900 focus:border-rose-500 outline-none transition-all"
+                                                            placeholder="Amenity name"
+                                                            value={amenity.name || ''}
+                                                            onChange={(e) => updateAmenitySelection(amenity.id, { name: e.target.value })}
+                                                        />
+                                                        <select
+                                                            className="w-full bg-white border-2 border-transparent rounded-2xl px-4 py-3 font-black text-zinc-900 focus:border-rose-500 outline-none transition-all"
+                                                            value={amenity.icon || 'wifi'}
+                                                            onChange={(e) => updateAmenitySelection(amenity.id, { icon: e.target.value })}
+                                                        >
+                                                            {AMENITY_ICON_OPTIONS.map(icon => (
+                                                                <option key={icon} value={icon}>{icon}</option>
+                                                            ))}
+                                                        </select>
+                                                        <input
+                                                            className="w-full bg-white border-2 border-transparent rounded-2xl px-4 py-3 font-bold text-zinc-700 focus:border-rose-500 outline-none transition-all md:col-span-2"
+                                                            placeholder="Description (optional)"
+                                                            value={amenity.description || ''}
+                                                            onChange={(e) => updateAmenitySelection(amenity.id, { description: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div className="flex items-center gap-2 mt-4">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => updateAmenitySelection(amenity.id, { status: amenity.status === 'included' ? 'not_included' : 'included' })}
+                                                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${amenity.status === 'included' ? 'bg-rose-500 text-white' : 'bg-zinc-900 text-white'}`}
+                                                        >
+                                                            {amenity.status === 'included' ? 'Included' : 'Not Included'}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSelectedAmenities(selectedAmenities.filter(a => a.id !== amenity.id))}
+                                                            className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-red-500 transition-all"
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {categoryAmenities.map(amenity => {
                                             const Icon = getAmenityIcon(amenity.icon);
@@ -573,7 +651,20 @@ export default function ListingForm({ initialData, onSubmit, isLoading = false }
 
                             <div className="space-y-8">
                                 {gallerySections.map((section, sectionIndex) => (
-                                    <div key={sectionIndex} className="bg-white border border-zinc-100 rounded-[2.5rem] p-6 shadow-sm">
+                                    <div
+                                        key={sectionIndex}
+                                        onDragOver={(e) => {
+                                            e.preventDefault();
+                                            setDropTarget({ sectionIndex, imageIndex: null });
+                                        }}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            handleGalleryImageDrop(sectionIndex, null);
+                                        }}
+                                        className={`bg-white border rounded-[2.5rem] p-6 shadow-sm transition-colors ${
+                                            dropTarget?.sectionIndex === sectionIndex ? 'border-rose-300 bg-rose-50/40' : 'border-zinc-100'
+                                        }`}
+                                    >
                                         <div className="flex items-center gap-4 mb-6">
                                             <input
                                                 className="flex-1 bg-zinc-50 border-2 border-transparent rounded-2xl px-4 py-3 font-black text-zinc-900 focus:bg-white focus:border-rose-500 outline-none transition-all"
@@ -605,7 +696,35 @@ export default function ListingForm({ initialData, onSubmit, isLoading = false }
                                         {section.images?.length > 0 && (
                                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                                 {section.images.map((url: string, imgIndex: number) => (
-                                                    <div key={imgIndex} className="relative group rounded-2xl overflow-hidden border-2 border-white shadow-lg aspect-square">
+                                                    <div
+                                                        key={imgIndex}
+                                                        draggable
+                                                        onDragStart={() => {
+                                                            setDraggedGalleryImage({
+                                                                sourceSectionIndex: sectionIndex,
+                                                                sourceImageIndex: imgIndex,
+                                                                imageUrl: url,
+                                                            });
+                                                            setDropTarget({ sectionIndex, imageIndex: imgIndex });
+                                                        }}
+                                                        onDragEnd={() => {
+                                                            setDraggedGalleryImage(null);
+                                                            setDropTarget(null);
+                                                        }}
+                                                        onDragOver={(e) => {
+                                                            e.preventDefault();
+                                                            setDropTarget({ sectionIndex, imageIndex: imgIndex });
+                                                        }}
+                                                        onDrop={(e) => {
+                                                            e.preventDefault();
+                                                            handleGalleryImageDrop(sectionIndex, imgIndex);
+                                                        }}
+                                                        className={`relative group rounded-2xl overflow-hidden border-2 shadow-lg aspect-square cursor-move ${
+                                                            dropTarget?.sectionIndex === sectionIndex && dropTarget?.imageIndex === imgIndex
+                                                                ? 'border-rose-400'
+                                                                : 'border-white'
+                                                        }`}
+                                                    >
                                                         <img src={url} className="w-full h-full object-cover" />
                                                         <button
                                                             type="button"
@@ -650,7 +769,25 @@ export default function ListingForm({ initialData, onSubmit, isLoading = false }
                                 <ModernInput label="Base Price / Night" icon={DollarSign} value={formData.basePricePerNight} onChange={(e: any) => handleFieldChange('basePricePerNight', e.target.value)} />
                                 <ModernInput label="Cleaning Fee" icon={DollarSign} value={formData.cleaningFee} onChange={(e: any) => handleFieldChange('cleaningFee', e.target.value)} />
                                 <ModernInput label="Service Fee" icon={DollarSign} value={formData.serviceFee} onChange={(e: any) => handleFieldChange('serviceFee', e.target.value)} />
-                                <ModernInput label="Tax Percentage" icon={Percent} value={formData.taxPercentage} onChange={(e: any) => handleFieldChange('taxPercentage', e.target.value)} />
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Tax Profile</label>
+                                    <select
+                                        className="w-full px-5 py-4 bg-zinc-50 border-2 border-transparent rounded-2xl text-zinc-900 font-bold focus:bg-white focus:border-rose-500 outline-none transition-all shadow-sm"
+                                        value={formData.taxProfileId as string}
+                                        onChange={(e) => handleFieldChange('taxProfileId', e.target.value)}
+                                    >
+                                        <option value="">None (use fallback %)</option>
+                                        {taxProfiles.map((profile) => (
+                                            <option key={profile.id} value={profile.id}>
+                                                {profile.name}
+                                                {profile.state ? ` - ${profile.state}` : ''}
+                                                {profile.city ? `, ${profile.city}` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Manage profiles in Admin → Tax Profiles</p>
+                                </div>
+                                <ModernInput label="Fallback Tax Percentage" icon={Percent} value={formData.taxPercentage} onChange={(e: any) => handleFieldChange('taxPercentage', e.target.value)} />
                                 <ModernInput label="Min Stay (Nights)" icon={Calendar} value={formData.minStayNights} onChange={(e: any) => handleFieldChange('minStayNights', e.target.value)} />
                                 <ModernInput label="Max Guests Allowed" icon={Users} value={formData.maxGuestsAllowed} onChange={(e: any) => handleFieldChange('maxGuestsAllowed', e.target.value)} />
                             </div>

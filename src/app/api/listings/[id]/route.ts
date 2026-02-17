@@ -58,6 +58,13 @@ export async function GET(
                         createdAt: "desc",
                     },
                 },
+                taxProfile: {
+                    include: {
+                        lines: {
+                            orderBy: { order: "asc" },
+                        },
+                    },
+                },
             },
         });
 

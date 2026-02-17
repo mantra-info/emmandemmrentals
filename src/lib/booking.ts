@@ -1,3 +1,5 @@
+import { calculatePricingBreakdown } from "@/lib/pricing";
+
 export const parseDate = (value: string) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
@@ -16,15 +18,38 @@ export const calculatePricing = ({
     cleaningFee,
     serviceFee,
     taxPercentage,
+    locationValue,
+    taxProfile,
 }: {
     nights: number;
     pricePerNight: number;
     cleaningFee: number;
     serviceFee: number;
     taxPercentage: number;
+    locationValue?: string | null;
+    taxProfile?: {
+        id?: string;
+        name?: string;
+        lines?: Array<{
+            id?: string;
+            label: string;
+            rate: number;
+            appliesTo: "NIGHTLY" | "CLEANING" | "SERVICE" | "ALL";
+            order?: number;
+            isActive?: boolean;
+        }>;
+        vatRate?: number | null;
+        gstRate?: number | null;
+    } | null;
 }) => {
-    const subtotal = pricePerNight * nights + cleaningFee + serviceFee;
-    const taxAmount = Math.round(subtotal * (taxPercentage / 100));
-    const total = subtotal + taxAmount;
-    return { subtotal, taxAmount, total };
+    const pricing = calculatePricingBreakdown({
+        nights,
+        pricePerNight,
+        cleaningFee,
+        serviceFee,
+        taxPercentage,
+        locationValue,
+        taxProfile,
+    });
+    return { subtotal: pricing.subtotal, taxAmount: pricing.taxAmount, total: pricing.total };
 };

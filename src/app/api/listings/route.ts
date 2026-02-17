@@ -30,9 +30,10 @@ export async function GET() {
                     },
                 },
             },
-            orderBy: {
-                createdAt: "desc",
-            },
+            orderBy: [
+                { displayOrder: "asc" },
+                { createdAt: "desc" },
+            ],
         });
 
         return NextResponse.json(listings);

@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, X } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useUi } from '@/context/UiContext';
+import { calculatePricingBreakdown } from '@/lib/pricing';
+import Link from 'next/link';
 
 type ListingData = {
     id: string;
@@ -16,6 +18,22 @@ type ListingData = {
     cleaningFee?: number | null;
     serviceFee?: number | null;
     taxPercentage?: number | null;
+    locationValue?: string | null;
+    cancellationPolicy?: string | null;
+    taxProfile?: {
+        id: string;
+        name: string;
+        vatRate?: number;
+        gstRate?: number;
+        lines?: Array<{
+            id: string;
+            label: string;
+            rate: number;
+            appliesTo: "NIGHTLY" | "CLEANING" | "SERVICE" | "ALL";
+            order: number;
+            isActive: boolean;
+        }>;
+    } | null;
 };
 
 const formatMoney = (value: number) => {
@@ -33,6 +51,7 @@ export default function BookingConfirmPage() {
     const [error, setError] = useState('');
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showPolicyModal, setShowPolicyModal] = useState(false);
     const { data: session } = useSession();
     const { setIsLoginModalOpen, showToast } = useUi();
 
@@ -72,12 +91,30 @@ export default function BookingConfirmPage() {
         const pricePerNight = listing.basePricePerNight ?? listing.price ?? 0;
         const cleaningFee = listing.cleaningFee ?? 0;
         const serviceFee = listing.serviceFee ?? 0;
-        const taxPercentage = listing.taxPercentage ?? 0;
-        const subtotal = pricePerNight * nights + cleaningFee + serviceFee;
-        const taxAmount = Math.round(subtotal * (taxPercentage / 100));
-        const total = subtotal + taxAmount;
-        return { pricePerNight, cleaningFee, serviceFee, taxPercentage, subtotal, taxAmount, total };
+        const calculated = calculatePricingBreakdown({
+            nights,
+            pricePerNight,
+            cleaningFee,
+            serviceFee,
+            taxPercentage: listing.taxPercentage ?? 0,
+            locationValue: listing.locationValue,
+            taxProfile: listing.taxProfile || undefined,
+        });
+        return { pricePerNight, cleaningFee, serviceFee, ...calculated };
     }, [listing, nights]);
+
+    const cancellationText = useMemo(() => {
+        if (!listing?.cancellationPolicy?.trim()) {
+            return 'Free cancellation within 24 hours of booking (when booked at least 7 days before check-in), then standard policy windows apply.';
+        }
+        return listing.cancellationPolicy.trim();
+    }, [listing?.cancellationPolicy]);
+
+    const cancellationPreview = useMemo(() => {
+        if (cancellationText.length <= 180) return cancellationText;
+        return `${cancellationText.slice(0, 180)}...`;
+    }, [cancellationText]);
+    const hasExtendedCancellationPolicy = cancellationText.length > 180;
 
     const handlePay = async () => {
         if (!session) {
@@ -155,7 +192,17 @@ export default function BookingConfirmPage() {
                                         onChange={(e) => setTermsAccepted(e.target.checked)}
                                         className="w-4 h-4"
                                     />
-                                    I agree to Booking Terms
+                                    <span>
+                                        I agree to the{' '}
+                                        <Link href="/terms-of-service" className="underline text-gray-900 font-medium">
+                                            Terms of Service
+                                        </Link>{' '}
+                                        and{' '}
+                                        <Link href="/privacy-policy" className="underline text-gray-900 font-medium">
+                                            Privacy Policy
+                                        </Link>
+                                        .
+                                    </span>
                                 </label>
                                 {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
                                 <button
@@ -215,9 +262,37 @@ export default function BookingConfirmPage() {
                                         <span>{formatMoney(pricing.serviceFee)}</span>
                                     </div>
                                 )}
-                                <div className="flex items-center justify-between">
-                                    <span>Taxes ({pricing.taxPercentage}%)</span>
-                                    <span>{formatMoney(pricing.taxAmount)}</span>
+                                {pricing.taxLines.map((line) => (
+                                    <div key={line.code} className="flex items-center justify-between">
+                                        <span>{line.label} ({line.rate}%)</span>
+                                        <span>{formatMoney(line.amount)}</span>
+                                    </div>
+                                ))}
+                                {pricing.taxLines.length === 0 && (
+                                    <div className="flex items-center justify-between">
+                                        <span>Taxes</span>
+                                        <span>{formatMoney(0)}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="pt-4 pb-2 border-b border-gray-100">
+                                <p className="text-xs font-semibold text-gray-900 mb-2">Tax breakdown</p>
+                                <div className="space-y-1 text-xs text-gray-600">
+                                    <div className="flex items-center justify-between">
+                                        <span>Taxable amount</span>
+                                        <span>{formatMoney(pricing.taxableBase)}</span>
+                                    </div>
+                                    {pricing.taxLines.map((line) => (
+                                        <div key={`formula-${line.code}`} className="flex items-center justify-between">
+                                            <span>{line.label}: {line.rate}% × {formatMoney(line.taxableBase)}</span>
+                                            <span>{formatMoney(line.amount)}</span>
+                                        </div>
+                                    ))}
+                                    <div className="flex items-center justify-between font-medium text-gray-800 pt-1">
+                                        <span>Total tax</span>
+                                        <span>{formatMoney(pricing.taxAmount)}</span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -229,11 +304,44 @@ export default function BookingConfirmPage() {
 
                         <div className="mt-6 flex items-center gap-3 text-xs text-gray-500">
                             <ShieldCheck size={16} className="text-green-600" />
-                            US-based taxes are included in the total.
+                            US taxes are shown as Sales/Lodging tax. VAT and GST are not applicable.
+                        </div>
+
+                        <div className="mt-4 border border-gray-200 rounded-2xl p-4">
+                            <p className="text-xs font-semibold text-gray-900 mb-2">Cancellation policy</p>
+                            <p className="text-xs text-gray-600 leading-relaxed">{cancellationPreview}</p>
+                            {hasExtendedCancellationPolicy && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPolicyModal(true)}
+                                    className="mt-2 text-xs font-semibold text-gray-900 underline"
+                                >
+                                    Read more
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
             </div>
+
+            {showPolicyModal && (
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4">
+                    <div className="w-full sm:max-w-xl bg-white rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 max-h-[85vh] overflow-y-auto">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-lg font-bold text-gray-900">Full cancellation policy</h2>
+                            <button
+                                type="button"
+                                onClick={() => setShowPolicyModal(false)}
+                                className="p-2 rounded-lg border border-gray-200 text-gray-700"
+                                aria-label="Close"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{cancellationText}</p>
+                    </div>
+                </div>
+            )}
         </main>
     );
 }

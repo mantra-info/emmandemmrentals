@@ -3,7 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
-import { calculateNights, calculatePricing, parseDate } from "@/lib/booking";
+import { calculateNights, parseDate } from "@/lib/booking";
+import { calculatePricingBreakdown } from "@/lib/pricing";
 
 export const runtime = "nodejs";
 
@@ -61,6 +62,15 @@ export async function POST(request: NextRequest) {
                 serviceFee: true,
                 taxPercentage: true,
                 minStayNights: true,
+                locationValue: true,
+                taxProfile: {
+                    include: {
+                        lines: {
+                            where: { isActive: true },
+                            orderBy: { order: "asc" },
+                        },
+                    },
+                },
             },
         });
 
@@ -77,13 +87,14 @@ export async function POST(request: NextRequest) {
         const pricePerNight = listing.basePricePerNight ?? listing.price ?? 0;
         const cleaningFee = listing.cleaningFee ?? 0;
         const serviceFee = listing.serviceFee ?? 0;
-        const taxPercentage = listing.taxPercentage ?? 0;
-        const pricing = calculatePricing({
+        const pricing = calculatePricingBreakdown({
             nights,
             pricePerNight,
             cleaningFee,
             serviceFee,
-            taxPercentage,
+            taxPercentage: listing.taxPercentage ?? 0,
+            locationValue: listing.locationValue,
+            taxProfile: listing.taxProfile || undefined,
         });
 
         const currency = (process.env.STRIPE_CURRENCY || "usd").toLowerCase();
@@ -132,16 +143,14 @@ export async function POST(request: NextRequest) {
                         quantity: 1,
                     }]
                     : []),
-                ...(pricing.taxAmount > 0
-                    ? [{
-                        price_data: {
-                            currency,
-                            product_data: { name: "Taxes" },
-                            unit_amount: Math.round(pricing.taxAmount * 100),
-                        },
-                        quantity: 1,
-                    }]
-                    : []),
+                ...pricing.taxLines.map((taxLine) => ({
+                    price_data: {
+                        currency,
+                        product_data: { name: `${taxLine.label} (${taxLine.rate}%)` },
+                        unit_amount: Math.round(taxLine.amount * 100),
+                    },
+                    quantity: 1,
+                })),
             ],
             success_url: `${appUrl}/booking/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${appUrl}/booking/${listingId}?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}&adults=${adults}&children=${children}&infants=${infants}&pets=${pets}`,

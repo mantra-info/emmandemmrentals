@@ -11,7 +11,13 @@ const Amenities = ({ amenities = [] }: AmenitiesProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { included } = resolveAmenitySelections(amenities);
-  const displayAmenities = included.slice(0, 12);
+  const prioritizedAmenities = [...included].sort((a: any, b: any) => {
+    const aCustom = String(a?.id || '').startsWith('custom-');
+    const bCustom = String(b?.id || '').startsWith('custom-');
+    if (aCustom === bCustom) return 0;
+    return aCustom ? -1 : 1;
+  });
+  const displayAmenities = prioritizedAmenities.slice(0, 12);
 
   if (displayAmenities.length === 0) {
     return null;
@@ -33,7 +39,7 @@ const Amenities = ({ amenities = [] }: AmenitiesProps) => {
                   <IconComponent size={24} className="text-gray-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">{amenity.name}</p>
+                  <p className="font-medium text-gray-900">{amenity.name || 'Custom amenity'}</p>
                   {amenity.description && (
                     <p className="text-xs text-gray-500 mt-1">{amenity.description}</p>
                   )}

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Lock, CreditCard, CheckCircle2 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useUi } from '@/context/UiContext';
+import { calculatePricingBreakdown } from '@/lib/pricing';
 
 type ListingData = {
   id: string;
@@ -16,6 +17,21 @@ type ListingData = {
   cleaningFee?: number | null;
   serviceFee?: number | null;
   taxPercentage?: number | null;
+  locationValue?: string | null;
+  taxProfile?: {
+    id: string;
+    name: string;
+    vatRate?: number;
+    gstRate?: number;
+    lines?: Array<{
+      id: string;
+      label: string;
+      rate: number;
+      appliesTo: "NIGHTLY" | "CLEANING" | "SERVICE" | "ALL";
+      order: number;
+      isActive: boolean;
+    }>;
+  } | null;
 };
 
 const formatMoney = (value: number) => `$${value.toFixed(2)}`;
@@ -66,11 +82,16 @@ export default function StripeCheckoutClient() {
     const pricePerNight = listing.basePricePerNight ?? listing.price ?? 0;
     const cleaningFee = listing.cleaningFee ?? 0;
     const serviceFee = listing.serviceFee ?? 0;
-    const taxPercentage = listing.taxPercentage ?? 0;
-    const subtotal = pricePerNight * nights + cleaningFee + serviceFee;
-    const taxAmount = Math.round(subtotal * (taxPercentage / 100));
-    const total = subtotal + taxAmount;
-    return { pricePerNight, cleaningFee, serviceFee, taxPercentage, subtotal, taxAmount, total };
+    const calculated = calculatePricingBreakdown({
+      nights,
+      pricePerNight,
+      cleaningFee,
+      serviceFee,
+      taxPercentage: listing.taxPercentage ?? 0,
+      locationValue: listing.locationValue,
+      taxProfile: listing.taxProfile || undefined,
+    });
+    return { pricePerNight, cleaningFee, serviceFee, ...calculated };
   }, [listing, nights]);
 
   const handlePay = async () => {
@@ -213,14 +234,34 @@ export default function StripeCheckoutClient() {
                     <span>{formatMoney(pricing.serviceFee)}</span>
                   </div>
                 )}
-                <div className="flex items-center justify-between">
-                  <span>Taxes ({pricing.taxPercentage}%)</span>
-                  <span>{formatMoney(pricing.taxAmount)}</span>
-                </div>
+                {pricing.taxLines.map((line) => (
+                  <div key={line.code} className="flex items-center justify-between">
+                    <span>{line.label} ({line.rate}%)</span>
+                    <span>{formatMoney(line.amount)}</span>
+                  </div>
+                ))}
+                {pricing.taxLines.length === 0 && (
+                  <div className="flex items-center justify-between">
+                    <span>Taxes</span>
+                    <span>{formatMoney(0)}</span>
+                  </div>
+                )}
               </div>
               <div className="pt-4 flex items-center justify-between font-semibold">
                 <span>Total</span>
                 <span>{formatMoney(pricing.total)}</span>
+              </div>
+              <div className="mt-3 text-xs text-gray-500 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span>Taxable amount</span>
+                  <span>{formatMoney(pricing.taxableBase)}</span>
+                </div>
+                {pricing.taxLines.map((line) => (
+                  <div key={`formula-${line.code}`} className="flex items-center justify-between">
+                    <span>{line.label}: {line.rate}% × {formatMoney(line.taxableBase)}</span>
+                    <span>{formatMoney(line.amount)}</span>
+                  </div>
+                ))}
               </div>
               <div className="mt-4 text-xs text-gray-500 flex items-center gap-2">
                 <CheckCircle2 size={14} className="text-emerald-600" />

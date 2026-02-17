@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { calculatePricingBreakdown } from "@/lib/pricing";
 
 const parseDate = (value: string) => {
     const date = new Date(value);
@@ -99,6 +100,15 @@ export async function POST(request: NextRequest) {
                 serviceFee: true,
                 taxPercentage: true,
                 minStayNights: true,
+                locationValue: true,
+                taxProfile: {
+                    include: {
+                        lines: {
+                            where: { isActive: true },
+                            orderBy: { order: "asc" },
+                        },
+                    },
+                },
             },
         });
 
@@ -115,10 +125,15 @@ export async function POST(request: NextRequest) {
         const pricePerNight = listing.basePricePerNight ?? listing.price ?? 0;
         const cleaningFee = listing.cleaningFee ?? 0;
         const serviceFee = listing.serviceFee ?? 0;
-        const taxPercentage = listing.taxPercentage ?? 0;
-        const subtotal = pricePerNight * nights + cleaningFee + serviceFee;
-        const taxAmount = Math.round(subtotal * (taxPercentage / 100));
-        const totalPrice = subtotal + taxAmount;
+        const pricing = calculatePricingBreakdown({
+            nights,
+            pricePerNight,
+            cleaningFee,
+            serviceFee,
+            taxPercentage: listing.taxPercentage ?? 0,
+            locationValue: listing.locationValue,
+            taxProfile: listing.taxProfile || undefined,
+        });
 
         const reservation = await prisma.reservation.create({
             data: {
@@ -132,12 +147,13 @@ export async function POST(request: NextRequest) {
                 infants,
                 pets,
                 pricePerNight,
-                subtotal,
+                subtotal: pricing.subtotal,
                 cleaningFee,
                 serviceFee,
-                taxPercentage,
-                taxAmount,
-                totalPrice,
+                taxPercentage: pricing.totalTaxRate,
+                taxAmount: pricing.taxAmount,
+                taxBreakdown: pricing.taxLines as any,
+                totalPrice: pricing.total,
             },
             include: {
                 listing: {

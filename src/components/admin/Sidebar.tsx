@@ -10,6 +10,7 @@ import {
     CalendarCheck,
     CreditCard,
     ScrollText,
+    Receipt,
     Settings,
     Menu,
     X
@@ -26,6 +27,7 @@ const Sidebar = () => {
         { label: 'Listings', href: '/admin/listings', icon: <Home size={20} /> },
         { label: 'Reservations', href: '/admin/reservations', icon: <CalendarCheck size={20} /> },
         { label: 'Payments', href: '/admin/payments', icon: <CreditCard size={20} /> },
+        { label: 'Tax Profiles', href: '/admin/tax-profiles', icon: <Receipt size={20} /> },
         { label: 'Audit Logs', href: '/admin/audit-logs', icon: <ScrollText size={20} /> },
     ];
 

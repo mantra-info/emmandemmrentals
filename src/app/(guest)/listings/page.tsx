@@ -23,9 +23,10 @@ export default async function ListingsPage() {
         },
       },
     },
-    orderBy: {
-      createdAt: 'desc',
-    },
+    orderBy: [
+      { displayOrder: 'asc' },
+      { createdAt: 'desc' },
+    ],
   });
 
   const calculateRating = (reviews: Array<{ rating: number }>) => {

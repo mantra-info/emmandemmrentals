@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Amenities from '@/components/Amenities';
 import BookingBar from '@/components/BookingBar';
 import LocationMap from '@/components/LocationMap';
@@ -7,7 +8,7 @@ import Reviews from '@/components/Reviews';
 import ImportantThingsToKnow from '@/components/RulesAndPolicy';
 import SleepingArrangements from '@/components/SleepingArrangements';
 import AboutSpace from '@/components/AboutSpace';
-import { Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Star, X } from 'lucide-react';
 import Link from 'next/link';
 import ReviewForm from '@/components/ReviewForm';
 
@@ -25,6 +26,9 @@ type ListingDetail = {
   bathroomCount: number;
   amenities: unknown[];
   rules: string[];
+  cancellationPolicy?: string | null;
+  checkInTime?: string | null;
+  checkOutTime?: string | null;
   mapIframe?: string | null;
   reviews: Array<{
     id: string;
@@ -64,6 +68,10 @@ export default function ListingDetailClient({
   listing: ListingDetail;
   userId?: string;
 }) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
+
   const displayImages = listing.images.length > 0
     ? listing.images.map((img) => img.imageUrl)
     : [listing.imageSrc];
@@ -71,6 +79,20 @@ export default function ListingDetailClient({
   const avgRating = listing.reviews.length > 0
     ? (listing.reviews.reduce((sum, r) => sum + r.rating, 0) / listing.reviews.length).toFixed(1)
     : '5.0';
+
+  const openLightbox = (index: number) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeLightbox = () => {
+    setLightboxOpen(false);
+    document.body.style.overflow = 'unset';
+  };
+
+  const prevImage = () => setLightboxIndex((i) => (i > 0 ? i - 1 : i));
+  const nextImage = () => setLightboxIndex((i) => (i < displayImages.length - 1 ? i + 1 : i));
 
   return (
     <main className="min-h-screen bg-white pb-40 md:pb-32">
@@ -91,7 +113,8 @@ export default function ListingDetailClient({
             return (
               <div
                 key={idx}
-                className={`relative overflow-hidden rounded-2xl bg-gray-50 ${gridClass}`}
+                className={`relative overflow-hidden rounded-2xl bg-gray-50 cursor-zoom-in ${gridClass}`}
+                onClick={() => openLightbox(idx)}
               >
                 <img
                   src={img}
@@ -175,9 +198,57 @@ export default function ListingDetailClient({
           listingId={listing.id}
           locationLabel={listing.locationValue}
         />
-        <ImportantThingsToKnow rules={listing.rules} />
-        <BookingBar listingId={listing.id} basePricePerNight={listing.basePricePerNight} minStayNights={listing.minStayNights} />
+        <ImportantThingsToKnow
+          rules={listing.rules}
+          cancellationPolicy={listing.cancellationPolicy}
+          checkInTime={listing.checkInTime}
+          checkOutTime={listing.checkOutTime}
+          maxGuests={listing.guestCount}
+          selectedCheckInDate={selectedStartDate}
+        />
+        <BookingBar
+          listingId={listing.id}
+          basePricePerNight={listing.basePricePerNight}
+          minStayNights={listing.minStayNights}
+          maxGuests={listing.guestCount}
+          onDateChange={({ startDate }) => {
+            setSelectedStartDate(startDate);
+          }}
+        />
       </div>
+
+      {lightboxOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+          <button
+            onClick={closeLightbox}
+            className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition"
+          >
+            <X size={22} />
+          </button>
+
+          <button
+            onClick={prevImage}
+            disabled={lightboxIndex === 0}
+            className="absolute left-4 md:left-8 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition disabled:opacity-40"
+          >
+            <ChevronLeft size={26} />
+          </button>
+
+          <img
+            src={displayImages[lightboxIndex]}
+            alt="Photo"
+            className="max-h-[85vh] max-w-[90vw] object-contain rounded-2xl shadow-2xl"
+          />
+
+          <button
+            onClick={nextImage}
+            disabled={lightboxIndex === displayImages.length - 1}
+            className="absolute right-4 md:right-8 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition disabled:opacity-40"
+          >
+            <ChevronRight size={26} />
+          </button>
+        </div>
+      )}
     </main>
   );
 }

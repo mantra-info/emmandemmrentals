@@ -13,6 +13,13 @@ enum UserRole {
   HOST
 }
 
+enum TaxAppliesTo {
+  NIGHTLY
+  CLEANING
+  SERVICE
+  ALL
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -90,6 +97,7 @@ model Listing {
   title                 String
   description           String
   imageSrc              String
+  displayOrder          Int      @default(0)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
   category              String
@@ -128,6 +136,7 @@ model Listing {
   cleaningFee           Int?
   serviceFee            Int?
   taxPercentage         Float?    @default(10)
+  taxProfileId          String?
   
   // Availability and minimum stay
   minStayNights         Int?      @default(1)
@@ -150,6 +159,7 @@ model Listing {
   advantages            ListingAdvantage[]
   bedrooms              ListingBedroom[]
   gallerySections       ListingGallerySection[]
+  taxProfile            TaxProfile? @relation(fields: [taxProfileId], references: [id], onDelete: SetNull)
 }
 
 model ListingImage {
@@ -236,6 +246,7 @@ model Reservation {
   serviceFee Int     @default(0)
   taxPercentage Float @default(0)
   taxAmount  Int     @default(0)
+  taxBreakdown Json? @default("[]")
   totalPrice Int
   stripeSessionId String? @unique
   stripePaymentIntentId String?
@@ -256,6 +267,39 @@ model Reservation {
 
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model TaxProfile {
+  id            String   @id @default(cuid())
+  name          String
+  country       String   @default("US")
+  state         String?
+  county        String?
+  city          String?
+  isActive      Boolean  @default(true)
+  effectiveFrom DateTime?
+  effectiveTo   DateTime?
+  vatRate       Float    @default(0)
+  gstRate       Float    @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  lines         TaxProfileLine[]
+  listings      Listing[]
+}
+
+model TaxProfileLine {
+  id          String       @id @default(cuid())
+  taxProfileId String
+  label       String
+  rate        Float
+  appliesTo   TaxAppliesTo @default(ALL)
+  order       Int          @default(0)
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  taxProfile  TaxProfile   @relation(fields: [taxProfileId], references: [id], onDelete: Cascade)
 }
 
 model Review {

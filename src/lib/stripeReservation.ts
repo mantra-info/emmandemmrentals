@@ -1,7 +1,8 @@
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
-import { calculateNights, calculatePricing, parseDate } from "@/lib/booking";
+import { calculateNights, parseDate } from "@/lib/booking";
 import { stripe } from "@/lib/stripe";
+import { calculatePricingBreakdown } from "@/lib/pricing";
 
 export const upsertReservationFromCheckoutSession = async (
     session: Stripe.Checkout.Session
@@ -109,6 +110,15 @@ export const upsertReservationFromCheckoutSession = async (
             serviceFee: true,
             taxPercentage: true,
             minStayNights: true,
+            locationValue: true,
+            taxProfile: {
+                include: {
+                    lines: {
+                        where: { isActive: true },
+                        orderBy: { order: "asc" },
+                    },
+                },
+            },
         },
     });
     if (!listing) return null;
@@ -120,13 +130,14 @@ export const upsertReservationFromCheckoutSession = async (
     const pricePerNight = listing.basePricePerNight ?? listing.price ?? 0;
     const cleaningFee = listing.cleaningFee ?? 0;
     const serviceFee = listing.serviceFee ?? 0;
-    const taxPercentage = listing.taxPercentage ?? 0;
-    const pricing = calculatePricing({
+    const pricing = calculatePricingBreakdown({
         nights,
         pricePerNight,
         cleaningFee,
         serviceFee,
-        taxPercentage,
+        taxPercentage: listing.taxPercentage ?? 0,
+        locationValue: listing.locationValue,
+        taxProfile: listing.taxProfile || undefined,
     });
 
     return prisma.reservation.create({
@@ -144,8 +155,9 @@ export const upsertReservationFromCheckoutSession = async (
             subtotal: pricing.subtotal,
             cleaningFee,
             serviceFee,
-            taxPercentage,
+            taxPercentage: pricing.totalTaxRate,
             taxAmount: pricing.taxAmount,
+            taxBreakdown: pricing.taxLines as any,
             totalPrice: pricing.total,
             stripeSessionId: session.id,
             stripePaymentIntentId: paymentIntent?.id,
