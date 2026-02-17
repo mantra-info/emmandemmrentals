@@ -23,10 +23,14 @@ export default async function ListingsPage() {
         },
       },
     },
-    orderBy: [
-      { displayOrder: 'asc' },
-      { createdAt: 'desc' },
-    ],
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const sortedListings = [...listings].sort((a: any, b: any) => {
+    const orderA = typeof a.displayOrder === 'number' ? a.displayOrder : Number.MAX_SAFE_INTEGER;
+    const orderB = typeof b.displayOrder === 'number' ? b.displayOrder : Number.MAX_SAFE_INTEGER;
+    if (orderA !== orderB) return orderA - orderB;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 
   const calculateRating = (reviews: Array<{ rating: number }>) => {
@@ -64,13 +68,13 @@ export default async function ListingsPage() {
         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Explore Properties</h1>
         <p className="text-gray-500 mb-12">Discover amazing places to stay</p>
 
-        {listings.length === 0 ? (
+        {sortedListings.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-gray-400 text-lg">No listings available at the moment</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {listings.map((listing) => {
+            {sortedListings.map((listing) => {
               const imageUrl = listing.images.length > 0 ? listing.images[0].imageUrl : listing.imageSrc;
               const avgRating = calculateRating(listing.reviews);
 
