@@ -86,6 +86,7 @@ export default async function ListingsPage() {
                 >
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 h-full flex flex-col">
                     <div className="relative h-48 overflow-hidden">
+                      
                       <img
                         src={imageUrl}
                         alt={listing.title}
