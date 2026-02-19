@@ -1,48 +1,78 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 
 type BannerSliderProps = {
   images: string[];
   intervalMs?: number;
+  autoplayStartDelayMs?: number;
 };
 
-export default function BannerSlider({ images, intervalMs = 4500 }: BannerSliderProps) {
+export default function BannerSlider({
+  images,
+  intervalMs = 4500,
+  autoplayStartDelayMs = 12000,
+}: BannerSliderProps) {
   const sanitizedImages = useMemo(() => images.filter(Boolean), [images]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
+  const [autoplayReady, setAutoplayReady] = useState(false);
+  const switchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const autoplayDelayRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (sanitizedImages.length <= 1) return;
+    autoplayDelayRef.current = setTimeout(() => {
+      setAutoplayReady(true);
+    }, autoplayStartDelayMs);
+
+    return () => {
+      if (autoplayDelayRef.current) clearTimeout(autoplayDelayRef.current);
+    };
+  }, [autoplayStartDelayMs, sanitizedImages.length]);
+
+  useEffect(() => {
+    if (!autoplayReady) return;
+    if (sanitizedImages.length <= 1) return;
     const timer = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % sanitizedImages.length);
+      if (typeof document !== 'undefined' && document.hidden) return;
+      setIsVisible(false);
+      switchTimeoutRef.current = setTimeout(() => {
+        setActiveIndex((prev) => (prev + 1) % sanitizedImages.length);
+        setIsVisible(true);
+      }, 220);
     }, intervalMs);
 
-    return () => clearInterval(timer);
-  }, [intervalMs, sanitizedImages.length]);
+    return () => {
+      clearInterval(timer);
+      if (switchTimeoutRef.current) clearTimeout(switchTimeoutRef.current);
+    };
+  }, [autoplayReady, intervalMs, sanitizedImages.length]);
+
+  useEffect(() => {
+    if (sanitizedImages.length <= 1) return;
+    const nextIndex = (activeIndex + 1) % sanitizedImages.length;
+    const prefetch = new window.Image();
+    prefetch.src = sanitizedImages[nextIndex];
+  }, [activeIndex, sanitizedImages]);
 
   const currentImages = sanitizedImages.length > 0 ? sanitizedImages : ['/banner.png'];
+  const activeSrc = currentImages[activeIndex] || currentImages[0];
 
   return (
     <div className="relative mb-8 overflow-hidden rounded-2xl bg-gray-100 shadow-sm">
       <div className="relative aspect-[1440/390] w-full">
-        {currentImages.map((src, index) => (
-          <div
-            key={`${src}-${index}`}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              index === activeIndex ? 'opacity-100' : 'opacity-0'
-            }`}
-          >
-            <Image
-              src={src}
-              alt="Featured property"
-              fill
-              priority={index === 0}
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 1280px"
-            />
-          </div>
-        ))}
+        <div className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+          <Image
+            src={activeSrc}
+            alt="Featured property"
+            fill
+            priority={activeIndex === 0}
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 1280px"
+          />
+        </div>
       </div>
 
       <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />

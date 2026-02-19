@@ -2,6 +2,7 @@ import { MapPin, Star, Users, Bed, Bath } from 'lucide-react';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import BannerSlider from '@/components/BannerSlider';
+import Image from 'next/image';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,11 +67,12 @@ export default async function ListingsPage() {
                 >
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 h-full flex flex-col">
                     <div className="relative h-48 overflow-hidden">
-                      
-                      <img
+                      <Image
                         src={imageUrl}
                         alt={listing.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                       <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-bold text-gray-900 shadow-sm">
                         ${listing.basePricePerNight ?? listing.price}/night
