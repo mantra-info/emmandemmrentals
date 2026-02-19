@@ -267,7 +267,7 @@ const BookingBar = ({ listingId, basePricePerNight = null, minStayNights = 1, ma
             >
               <div className="flex justify-between items-center mb-8 md:mb-10">
                 <span className="text-sm text-gray-400 font-bold">Choose guest numbers (up to {safeMaxGuests})</span>
-                <button onClick={() => setActivePopup(null)} className="p-1 border-2 border-black rounded-lg"><X size={16} strokeWidth={3} /></button>
+                <button onClick={() => setActivePopup(null)} className="p-1 border-2 border-black rounded-lg"><X size={16} strokeWidth={3} color='black' /></button>
               </div>
               <div className="mb-6 text-xs font-semibold text-gray-500">
                 Maximum allowed guests: {safeMaxGuests}

@@ -1,6 +1,7 @@
 import { MapPin, Star, Users, Bed, Bath } from 'lucide-react';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
+import BannerSlider from '@/components/BannerSlider';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,28 +43,7 @@ export default async function ListingsPage() {
   return (
     <main className="min-h-screen bg-white pb-40">
       <div className="max-w-7xl mx-auto px-4 md:px-6 pt-8 md:pt-12">
-        <div className="relative mb-8 overflow-hidden rounded-2xl bg-gray-100 shadow-sm">
-          <div className="aspect-[1440/390] w-full">
-            <img
-              src="/banner.png"
-              alt="Featured property"
-              className="h-full w-full object-cover"
-            />
-          </div>
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent"></div>
-          <div className="absolute inset-0 flex md:items-end">
-            <div className="max-w-md px-5 py-4 md:px-10 pb-10">
-              <h2
-                className="text-lg md:text-5xl font-semibold text-white leading-tight"
-                style={{ fontFamily: 'Begies, "Times New Roman", serif' }}
-              >
-                Luxury that
-                <br />
-                feels personal
-              </h2>
-            </div>
-          </div>
-        </div>
+        <BannerSlider images={['/banner.png', '/paradise1.png', '/paradise2.png', '/paradise3.png', '/paradise4.png']} />
 
         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Explore Properties</h1>
         <p className="text-gray-500 mb-12">Discover amazing places to stay</p>

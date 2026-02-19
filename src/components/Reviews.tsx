@@ -3,12 +3,12 @@ import { Star } from 'lucide-react';
 import Image from 'next/image';
 
 const defaultCategories = [
-  { label: 'Cleanliness', score: '5.0' },
-  { label: 'Accuracy', score: '4.5' },
-  { label: 'Check-in', score: '4.0' },
-  { label: 'Communication', score: '4.8' },
-  { label: 'Location', score: '4.8' },
-  { label: 'Value', score: '4.8' },
+  { label: 'Cleanliness', score: 5.0 },
+  { label: 'Accuracy', score: 4.5 },
+  { label: 'Check-in', score: 4.0 },
+  { label: 'Communication', score: 4.8 },
+  { label: 'Location', score: 4.8 },
+  { label: 'Value', score: 4.8 },
 ];
 
 const defaultReviews = [
@@ -59,6 +59,20 @@ const Reviews = ({ reviews = [], totalRating }: ReviewsProps) => {
   const hasReviews = reviews && reviews.length > 0;
   const avgRating = totalRating || (hasReviews ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : '5.0');
   const categories = defaultCategories;
+  const renderCategoryStars = (score: number) => (
+    <div className="flex items-center gap-0.5">
+      {[...Array(5)].map((_, idx) => {
+        const filled = idx + 1 <= Math.round(score);
+        return (
+          <Star
+            key={idx}
+            size={14}
+            className={filled ? 'fill-yellow-500 text-yellow-500' : 'text-zinc-300'}
+          />
+        );
+      })}
+    </div>
+  );
 
   const displayReviews = hasReviews
     ? reviews.slice(0, 2).map((rev, idx) => {
@@ -126,13 +140,19 @@ const Reviews = ({ reviews = [], totalRating }: ReviewsProps) => {
         {/* Right: Categories */}
         <div className="hidden lg:block w-px bg-gray-200 self-stretch" />
         
-        <div className="w-full lg:flex-1 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
+        <div className="w-full lg:flex-1">
+          <h4 className="font-bold text-gray-900 mb-6">Category ratings</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
           {categories.map((cat) => (
-            <div key={cat.label} className="flex flex-col gap-6">
-              <span className="text-lg font-bold text-zinc-900">{cat.score}</span>
+            <div key={cat.label} className="flex items-center justify-between gap-4 pb-3 border-b border-gray-100">
               <span className="text-sm font-medium text-zinc-900">{cat.label}</span>
+              <div className="flex items-center gap-3">
+                {renderCategoryStars(cat.score)}
+                <span className="text-sm font-bold text-zinc-900 w-8 text-right">{cat.score.toFixed(1)}</span>
+              </div>
             </div>
           ))}
+          </div>
         </div>
       </div>
 
