@@ -44,7 +44,7 @@ export default async function ListingsPage() {
   return (
     <main className="min-h-screen bg-white pb-40">
       <div className="max-w-7xl mx-auto px-4 md:px-6 pt-8 md:pt-12">
-        <BannerSlider images={['/banner.png', '/paradise1.png', '/paradise2.png', '/paradise3.png', '/paradise4.png']} />
+        <BannerSlider images={['/banner.png', '/banner1.png', '/banner2.png', '/banner3.png']} />
 
         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Explore Properties</h1>
         <p className="text-gray-500 mb-12">Discover amazing places to stay</p>
