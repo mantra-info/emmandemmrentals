@@ -60,25 +60,44 @@ export default async function ListingsPage() {
               const avgRating = calculateRating(listing.reviews);
 
               return (
-                <Link
+                <div
                   key={listing.id}
-                  href={`/listing/${listing.id}`}
-                  className="group cursor-pointer"
+                  className={`group ${listing.comingSoon ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                 >
-                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 h-full flex flex-col">
+                  <div className={`bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all duration-300 h-full flex flex-col ${listing.comingSoon ? 'opacity-95' : 'hover:shadow-md'}`}>
                     <div className="relative h-48 overflow-hidden">
-                      <Image
-                        src={imageUrl}
-                        alt={listing.title}
-                        fill
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                        className="object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
+                      {listing.comingSoon ? (
+                        <div className="relative h-full w-full">
+                          <Image
+                            src={imageUrl}
+                            alt={listing.title}
+                            fill
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                            className="object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/35" />
+                        </div>
+                      ) : (
+                        <Link href={`/listing/${listing.id}`}>
+                          <Image
+                            src={imageUrl}
+                            alt={listing.title}
+                            fill
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                            className="object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        </Link>
+                      )}
                       <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-bold text-gray-900 shadow-sm">
                         ${listing.basePricePerNight ?? listing.price}/night
                       </div>
+                      {listing.comingSoon && (
+                        <div className="absolute top-3 left-3 bg-amber-500/95 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-white shadow-sm">
+                          Coming Soon
+                        </div>
+                      )}
                       {listing.reviews.length > 0 && (
-                        <div className="absolute top-3 left-3 flex items-center gap-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-bold">
+                        <div className={`absolute flex items-center gap-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-bold ${listing.comingSoon ? 'top-12 left-3' : 'top-3 left-3'}`}>
                           <Star size={12} className="text-yellow-500 fill-yellow-500" />
                           <span>{avgRating}</span>
                         </div>
@@ -86,9 +105,13 @@ export default async function ListingsPage() {
                     </div>
 
                     <div className="p-4 flex-1 flex flex-col">
-                      <h3 className="font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">
-                        {listing.title}
-                      </h3>
+                      {listing.comingSoon ? (
+                        <h3 className="font-bold text-gray-900 line-clamp-2 mb-2">{listing.title}</h3>
+                      ) : (
+                        <Link href={`/listing/${listing.id}`} className="font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">
+                          {listing.title}
+                        </Link>
+                      )}
 
                       <div className="flex items-center gap-1 text-sm text-gray-500 mb-4">
                         <MapPin size={14} />
@@ -115,7 +138,7 @@ export default async function ListingsPage() {
                       </p>
                     </div>
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>

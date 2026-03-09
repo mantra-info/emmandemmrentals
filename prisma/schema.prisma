@@ -145,6 +145,9 @@ model Listing {
   
   // Instant book
   instantBook           Boolean   @default(false)
+
+  // Marks listing as not yet open for booking/details
+  comingSoon            Boolean   @default(false)
   
   // Visibility
   isActive              Boolean   @default(true)

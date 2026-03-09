@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
             minStayNights = 1,
             maxGuestsAllowed = null,
             instantBook = false,
+            comingSoon = false,
             cancellationPolicy = null,
             specifications = [],
             advantages = [],
@@ -127,6 +128,7 @@ export async function POST(request: NextRequest) {
                     minStayNights: parsedMinStayNights,
                     ...(parsedMaxGuestsAllowed && { maxGuestsAllowed: parsedMaxGuestsAllowed }),
                     instantBook,
+                    comingSoon,
                     ...(cancellationPolicy && { cancellationPolicy }),
                 },
                 include: {
@@ -353,6 +355,7 @@ export async function POST(request: NextRequest) {
                     minStayNights: parsedMinStayNights,
                     ...(parsedMaxGuestsAllowed && { maxGuestsAllowed: parsedMaxGuestsAllowed }),
                     instantBook,
+                    comingSoon,
                     ...(cancellationPolicy && { cancellationPolicy }),
                     images: {
                         create: images.map((url: string, index: number) => ({

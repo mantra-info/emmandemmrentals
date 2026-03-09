@@ -117,6 +117,7 @@ export default function ListingForm({ initialData, onSubmit, isLoading = false }
         minStayNights: initialData?.minStayNights || '1',
         maxGuestsAllowed: initialData?.maxGuestsAllowed || '',
         instantBook: initialData?.instantBook || false,
+        comingSoon: initialData?.comingSoon || false,
         cancellationPolicy: initialData?.cancellationPolicy || '',
     });
 
@@ -801,6 +802,18 @@ export default function ListingForm({ initialData, onSubmit, isLoading = false }
                                 </div>
                                 <button onClick={() => handleFieldChange('instantBook', !formData.instantBook)} className={`w-14 h-8 rounded-full px-1 flex items-center transition-all duration-500 ${formData.instantBook ? 'bg-rose-500' : 'bg-zinc-800'}`}>
                                     <div className={`w-6 h-6 bg-white rounded-full transition-all duration-500 ${formData.instantBook ? 'translate-x-6' : ''}`} />
+                                </button>
+                            </div>
+                            <div className="p-8 bg-zinc-900 rounded-[2.5rem] flex items-center justify-between text-white shadow-2xl shadow-zinc-200 mt-4">
+                                <div className="flex items-center gap-4">
+                                    <Clock className="text-amber-400" size={28} />
+                                    <div>
+                                        <p className="font-black text-sm uppercase tracking-widest">Coming Soon</p>
+                                        <p className="text-[10px] text-zinc-500 font-bold uppercase mt-1 tracking-tight">Show listing card as coming soon and disable detail page click</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => handleFieldChange('comingSoon', !formData.comingSoon)} className={`w-14 h-8 rounded-full px-1 flex items-center transition-all duration-500 ${formData.comingSoon ? 'bg-amber-500' : 'bg-zinc-800'}`}>
+                                    <div className={`w-6 h-6 bg-white rounded-full transition-all duration-500 ${formData.comingSoon ? 'translate-x-6' : ''}`} />
                                 </button>
                             </div>
                         </FormSection>
