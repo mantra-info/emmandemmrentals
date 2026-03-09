@@ -134,7 +134,7 @@ export default async function ListingsPage() {
                       </div>
 
                       <p className="text-xs text-gray-500 mt-auto">
-                        Hosted by <span className="font-medium text-gray-700">{listing.user.name || listing.user.email}</span>
+                        Hosted by <span className="font-medium text-gray-700">Emm&Emm Rentals</span>
                       </p>
                     </div>
                   </div>
